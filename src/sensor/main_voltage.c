@@ -1,5 +1,5 @@
 /**
- * @file adc_handler.c
+ * @file main_voltage.c
  * @brief ADC handling and voltage measurement module.
  *
  * This module initializes the ADC, reads voltage samples periodically, converts the raw ADC
