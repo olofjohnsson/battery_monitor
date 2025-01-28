@@ -1,0 +1,60 @@
+/ {
+    gate_1: gate-1 {
+        status = "disabled";
+    };
+
+    gate_2: gate-2 {
+        status = "disabled";
+    };
+
+    sw_1: sw-1 {
+        status = "disabled";
+    };
+
+    sw_2: sw-2 {
+        status = "disabled";
+    };
+
+    pir_1: pir-1 {
+        status = "disabled";
+    };
+
+    sw_pwr_1: sw-pwr-1 {
+        status = "disabled";
+    };
+
+	button_1: button-1 {
+        status = "disabled";
+    };
+
+	sw_mp3: sw-mp3 {
+        status = "disabled";
+    };
+
+	sw_light: sw-light {
+        status = "disabled";
+    };
+
+	leds {
+		compatible = "gpio-leds";
+		red: led_0 {
+			gpios = <&gpio0 15 (GPIO_ACTIVE_LOW)>;
+			label = "Red LED";
+		};
+	};
+};
+
+&adc {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    status = "okay";
+
+    channel@0 {
+        reg = <0>;
+        zephyr,gain = "ADC_GAIN_1_6";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 20)>;
+        zephyr,input-positive = <NRF_SAADC_AIN0>;
+        zephyr,resolution = <10>;
+    };
+};

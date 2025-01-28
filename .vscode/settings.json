@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "gpio.h": "c",
+        "gatt.h": "c",
+        "nrfx_temp.h": "c",
+        "lbs.h": "c",
+        "stddef.h": "c",
+        "compare": "cpp"
+    }
+}
