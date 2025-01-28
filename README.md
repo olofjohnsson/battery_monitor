@@ -1,10 +1,13 @@
-### Good to know
-// Enable the DC/DC converter<br>
-nrf_power_dcdcen_set(NRF_POWER, true);<br>
-// Set REGOUT0 to 3.3V<br>
-NRF_UICR->REGOUT0 = UICR_REGOUT0_VOUT_3V3;
+### Description
+This project is based on the nRF52840 ProMicro board. The project is created in visual studio code using the nrf connect sdk.
 
-Relay cannot handle stopping and changing directio in one go. It needs time to stop before rotation in the other direction can be triggered.
+The purpose is to read voltage from a 72V Lithium Ion battery pack. 
+
+There is a voltage divider using R1 and R2 with values of 240k and 10k (see main_voltage.c) to provide a suitable voltage level to the board.
+
+There is a reading of internal temperature.
+
+The voltage and the temperature transmitted via ble advertising in connected mode.
 
 ### ToDo
-Play spookie sound a bit earlier when PIR detection happens.
+Add external temperature sensor to keep close to the batteries.
