@@ -15,6 +15,17 @@
 #include "../sensor/main_voltage.h"
 #include "../bluetooth/bluetooth.h"
 #include "../bluetooth/service.h"
+#include <bluetooth/services/nus.h>
+
+typedef struct {
+    int64_t timestamp;
+    int32_t adc_value;
+} adc_sample_t;
+
+#define MAX_SAMPLES 8192
+
+static adc_sample_t samples[MAX_SAMPLES];
+static uint8_t sample_index = 0;
 
 // Constants and configurations
 #define ADC_DEVICE_NAME DT_NODE_FULL_NAME(DT_NODELABEL(adc)) ///< ADC device node label
@@ -56,10 +67,10 @@ static struct adc_sequence sequence = {
  * @param adc_value Raw ADC reading.
  * @return Calculated voltage in millivolts (mV).
  */
-uint32_t convert_adc_to_mv(uint16_t adc_value)
+int32_t convert_adc_to_mv(uint16_t adc_value)
 {
-    uint32_t v_adc_mv = (adc_value * ADC_REF_MV) / ADC_RESOLUTION; // ADC value to mV
-    uint32_t v_in_mv = v_adc_mv * (R1 + R2) / R2;                 // Adjust using voltage divider
+    int32_t v_adc_mv = (adc_value * ADC_REF_MV) / ADC_RESOLUTION; // ADC value to mV
+    int32_t v_in_mv = v_adc_mv * (R1 + R2) / R2;                 // Adjust using voltage divider
     return v_in_mv;
 }
 
@@ -139,10 +150,69 @@ int init_adc(void)
 	error_debug = 103;
 
     // Start the ADC sampling thread
-    k_thread_create(&adc_thread_data, adc_thread_stack,
-		K_THREAD_STACK_SIZEOF(adc_thread_stack),
-		adc_thread,
-		NULL, NULL, NULL,
-		ADC_THREAD_PRIORITY, 0, K_NO_WAIT);
+    // k_thread_create(&adc_thread_data, adc_thread_stack,
+	// 	K_THREAD_STACK_SIZEOF(adc_thread_stack),
+	// 	adc_thread,
+	// 	NULL, NULL, NULL,
+	// 	ADC_THREAD_PRIORITY, 0, K_NO_WAIT);
 	return 0;
+}
+
+void format_csv(char *buffer, size_t buf_size) {
+    if (buffer == NULL || samples == NULL || buf_size == 0) {
+        return; // Prevent null pointer issues
+    }
+
+    // Write CSV header
+    size_t offset = snprintf(buffer, buf_size, "Timestamp,ADC_Value\n");
+
+    // Ensure snprintf didn't truncate
+    if (offset >= buf_size) {
+        buffer[buf_size - 1] = '\0';
+        printf("Warning: Buffer too small, header truncated!\n");
+        return;
+    }
+
+    // Write each sample
+    for (uint8_t i = 0; i < sample_index; i++) {
+        int written = snprintf(buffer + offset, buf_size - offset, "%lld,%d\n", 
+                               samples[i].timestamp, samples[i].adc_value);
+
+        if (written < 0 || offset + written >= buf_size) {
+            buffer[buf_size - 1] = '\0';
+            printf("Warning: Buffer too small, data truncated!\n");
+            break;
+        }
+
+        offset += written;
+    }
+
+    // Ensure null-termination
+    buffer[buf_size - 1] = '\0';
+}
+
+void store_sample(void)
+{
+	int err = adc_read(adc_dev, &sequence);
+	int64_t timestamp = k_uptime_get()/1000;
+	int32_t adc_value = convert_adc_to_mv(adc_buffer[0]) / 100;
+
+	if (sample_index < MAX_SAMPLES && err == 0) {
+		samples[sample_index].timestamp = timestamp;
+		samples[sample_index].adc_value = adc_value;
+		sample_index++;
+	}
+}
+
+void attempt_send()
+{
+	int err = 0;
+	char csv_buffer[1024];
+	format_csv(csv_buffer, sizeof(csv_buffer));
+	err = bt_nus_send(NULL, csv_buffer, strlen(csv_buffer));
+	if (!err)
+	{
+		sample_index = 0;
+	}
+    
 }
