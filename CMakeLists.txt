@@ -17,6 +17,7 @@ target_sources(app PRIVATE
   src/sensor/main_voltage.c
   src/sensor/internal_temp.c
   src/hardware/led.c
+  src/hardware/mux.c
 )
 
 # NORDIC SDK APP END

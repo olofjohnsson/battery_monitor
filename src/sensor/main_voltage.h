@@ -15,6 +15,10 @@ extern "C" {
  */
 int init_adc(void);
 
+void store_sample(void);
+
+void attempt_send(void);
+
 #ifdef __cplusplus
 }
 #endif

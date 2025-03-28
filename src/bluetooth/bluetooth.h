@@ -17,5 +17,4 @@ void bluetooth_init(void);
  */
 void bluetooth_start_advertising(void);
 
-
 #endif // BLUETOOTH_H

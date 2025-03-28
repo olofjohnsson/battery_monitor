@@ -15,26 +15,37 @@
 #include "../sensor/main_voltage.h"
 #include "../bluetooth/bluetooth.h"
 #include "../bluetooth/service.h"
+#include "../hardware/mux.h"
+#include <bluetooth/services/nus.h>
+
+#define NUMBER_OF_BATTERIES_IN_SERIES 20
+#define NUMBER_OF_MUXES 2
+#define NUMBER_OF_MUX_CHANNELS 16
+#define TOTAL_CHANNELS (NUMBER_OF_MUXES * NUMBER_OF_MUX_CHANNELS)
+
+typedef struct {
+    int64_t timestamp;
+    uint16_t adc_values[NUMBER_OF_MUX_CHANNELS];  /* Array to store ADC values per channel */
+} adc_sample_t;
+
+#define MAX_SAMPLES 8192/4
+
+static adc_sample_t samples[MAX_SAMPLES];
+static uint8_t sample_index = 0;
 
 // Constants and configurations
 #define ADC_DEVICE_NAME DT_NODE_FULL_NAME(DT_NODELABEL(adc)) ///< ADC device node label
-#define ADC_THREAD_STACK_SIZE 1024                          ///< Stack size for the ADC thread
-#define ADC_THREAD_PRIORITY   5                             ///< Priority for the ADC thread
-#define ADC_SAMPLE_INTERVAL_MS 500                          ///< Sampling interval in milliseconds
 #define R1              240000                              ///< Voltage divider resistor R1 (in ohms)
 #define R2              10000                               ///< Voltage divider resistor R2 (in ohms)
 #define ADC_REF_MV      3300                                ///< Reference voltage in mV
 #define ADC_RESOLUTION  1024                                ///< ADC resolution (10-bit)
-
-K_THREAD_STACK_DEFINE(adc_thread_stack, ADC_THREAD_STACK_SIZE);
-struct k_thread adc_thread_data;
 
 #define ADC_SAMPLE_INTERVAL	20 ///< Sampling interval in milliseconds
 #define BATTERY_VOLTAGE(sample) (sample * 6 * 600 / 1024) ///< Macro for calculating battery voltage
 
 // ADC configuration
 const struct device *adc_dev;
-static int16_t adc_buffer[3];
+static int16_t adc_buffer[1];
 static uint8_t error_debug = 100;
 
 static struct adc_sequence sequence = {
@@ -56,10 +67,10 @@ static struct adc_sequence sequence = {
  * @param adc_value Raw ADC reading.
  * @return Calculated voltage in millivolts (mV).
  */
-uint32_t convert_adc_to_mv(uint16_t adc_value)
+int32_t convert_adc_to_mv(uint16_t adc_value)
 {
-    uint32_t v_adc_mv = (adc_value * ADC_REF_MV) / ADC_RESOLUTION; // ADC value to mV
-    uint32_t v_in_mv = v_adc_mv * (R1 + R2) / R2;                 // Adjust using voltage divider
+    int32_t v_adc_mv = (adc_value * ADC_REF_MV) / ADC_RESOLUTION; // ADC value to mV
+    int32_t v_in_mv = v_adc_mv * (R1 + R2) / R2;                 // Adjust using voltage divider
     return v_in_mv;
 }
 
@@ -84,38 +95,14 @@ static int adc_sample(void)
 	return 0;
 }
 
-/**
- * @brief ADC sampling thread.
- *
- * This thread periodically reads ADC samples, processes the results, and handles errors if they occur.
- *
- * @param arg1 Unused.
- * @param arg2 Unused.
- * @param arg3 Unused.
- */
-static void adc_thread(void *arg1, void *arg2, void *arg3)
-{
-    uint16_t err = 0;
-
-    while (1) {
-        k_sleep(K_MSEC(ADC_SAMPLE_INTERVAL_MS)); // Wait for the next sampling interval
-        err = adc_sample();
-        if (err) {
-            // Handle errors (optional)
-        }
-    }
-}
-
 // ADC channel configuration
 static const struct adc_channel_cfg ch0_cfg_dt =
     ADC_CHANNEL_CFG_DT(DT_CHILD(DT_NODELABEL(adc), channel_0));
 
 /**
- * @brief Initialize the ADC and start the sampling thread.
+ * @brief Initialize the ADC
  *
- * This function sets up the ADC device, configures the ADC channel, and creates a thread
- * to periodically read ADC samples.
- *
+ * This function sets up the ADC device, and configures the ADC channel
  * @return 0 on success, or a negative error code on failure.
  */
 int init_adc(void)
@@ -138,11 +125,93 @@ int init_adc(void)
 
 	error_debug = 103;
 
-    // Start the ADC sampling thread
-    k_thread_create(&adc_thread_data, adc_thread_stack,
-		K_THREAD_STACK_SIZEOF(adc_thread_stack),
-		adc_thread,
-		NULL, NULL, NULL,
-		ADC_THREAD_PRIORITY, 0, K_NO_WAIT);
 	return 0;
+}
+
+void format_csv(char *buffer, size_t buf_size) {
+    if (buffer == NULL || samples == NULL || buf_size == 0) {
+        return; // Prevent null pointer issues
+    }
+
+    // Write CSV header
+    size_t offset = snprintf(buffer, buf_size, 
+        "Timestamp,B1,B2,B3,B4,B5,B6,B7,B8,B9,B10,B11,B12,B13,B14,B15,B16,B17,B18,B19,B20\n");
+
+    // Check if header was truncated
+    if (offset >= buf_size) {
+        buffer[buf_size - 1] = '\0';
+        printf("Warning: Buffer too small, header truncated!\n");
+        return;
+    }
+
+    // Write each sample
+    for (uint8_t j = 0; j < sample_index; j++) { 
+        int written = snprintf(buffer + offset, buf_size - offset, "%lld", samples[j].timestamp);
+
+        if (written < 0 || (size_t)written >= buf_size - offset) {
+            buffer[buf_size - 1] = '\0';
+            printf("Warning: Buffer too small, data truncated!\n");
+            return;
+        }
+
+        offset += written;
+
+        // Add ADC values
+        for (uint8_t i = 0; i < NUMBER_OF_BATTERIES_IN_SERIES; i++) {
+            written = snprintf(buffer + offset, buf_size - offset, ",%d", samples[j].adc_values[i]);
+
+            if (written < 0 || (size_t)written >= buf_size - offset) {
+                buffer[buf_size - 1] = '\0';
+                printf("Warning: Buffer too small, data truncated!\n");
+                return;
+            }
+
+            offset += written;
+        }
+
+        // Add newline
+        if (offset < buf_size - 1) {
+            buffer[offset++] = '\n';
+            buffer[offset] = '\0';
+        }
+    }
+
+    // Ensure null-termination
+    buffer[buf_size - 1] = '\0';
+}
+
+void store_sample(void) {
+    int err = adc_read(adc_dev, &sequence);
+    int64_t timestamp = k_uptime_get() / 1000;
+
+    if (sample_index < MAX_SAMPLES && err == 0) {
+        samples[sample_index].timestamp = timestamp;
+
+        for (uint8_t mux = 0; mux < NUMBER_OF_MUXES; mux++) {
+            for (uint8_t channel = 0; channel < NUMBER_OF_MUX_CHANNELS; channel++) {
+                adc_read(adc_dev, &sequence);
+                set_mux_channel(mux, channel);
+                k_sleep(K_USEC(50));  /* Allow settling */
+                
+                // Ensure adc_buffer is properly used
+                samples[sample_index].adc_values[mux * NUMBER_OF_MUX_CHANNELS + channel] = adc_buffer[0];
+            }
+        }
+        sample_index++;
+    }
+}
+
+void attempt_send() {
+    int err = 0;
+    char csv_buffer[1024];
+
+    format_csv(csv_buffer, sizeof(csv_buffer));
+
+    err = bt_nus_send(NULL, csv_buffer, strlen(csv_buffer));
+
+    if (!err) {
+        sample_index = 0;
+    } else {
+        printf("Error: bt_nus_send failed with code %d\n", err);
+    }
 }

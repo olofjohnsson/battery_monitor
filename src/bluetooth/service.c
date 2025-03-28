@@ -92,3 +92,28 @@ int bt_send_temp(uint32_t temp)
                           &temp,
                           sizeof(temp));
 }
+
+// Send CSV data over BLE notifications
+int bt_send_csv(const char *csv_data) {
+    if (!notify_enabled) {
+        return -1;
+    }
+
+    size_t len = strlen(csv_data);
+    size_t offset = 0;
+    size_t chunk_size = 20;  // Adjust based on MTU size
+
+    while (offset < len) {
+        size_t send_size = (len - offset > chunk_size) ? chunk_size : (len - offset);
+        int err = bt_gatt_notify(NULL, &battery_svc.attrs[2], csv_data + offset, send_size);
+
+        if (err) {
+            return -2;
+        }
+
+        offset += send_size;
+        k_sleep(K_MSEC(10));  // Prevent overflow
+    }
+
+    return 0;
+}

@@ -8,6 +8,12 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/drivers/gpio.h>
 
+#include <zephyr/kernel.h>
+#include <zephyr/types.h>
+#include <zephyr/device.h>
+#include <bluetooth/services/nus.h>
+
+
 #include "service.h"
 
 #define DEVICE_NAME             CONFIG_BT_DEVICE_NAME
@@ -178,6 +184,12 @@ void bluetooth_init(void)
     err = bt_enable(NULL);
     if (err) {
         printk("Bluetooth init failed (err %d)\n", err);
+        return;
+    }
+
+    err = bt_nus_init(NULL);
+    if (err) {
+        printk("Failed to initialize NUS (err %d)\n", err);
         return;
     }
 
