@@ -68,8 +68,6 @@ int bt_send_voltage(uint32_t voltage);
  */
 int bt_send_temp(uint32_t temp);
 
-int bt_send_csv(const char *csv_data);
-
 #ifdef __cplusplus
 }
 #endif

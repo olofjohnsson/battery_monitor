@@ -25,10 +25,10 @@
 
 typedef struct {
     int64_t timestamp;
-    uint16_t adc_values[NUMBER_OF_MUX_CHANNELS];  /* Array to store ADC values per channel */
+    uint16_t adc_values[TOTAL_CHANNELS];  /* Adjusted size to store all channels */
 } adc_sample_t;
 
-#define MAX_SAMPLES 8192/4
+#define MAX_SAMPLES 16
 
 static adc_sample_t samples[MAX_SAMPLES];
 static uint8_t sample_index = 0;
@@ -128,20 +128,23 @@ int init_adc(void)
 	return 0;
 }
 
-void format_csv(char *buffer, size_t buf_size) {
+int format_csv(char *buffer, size_t buf_size) {
     if (buffer == NULL || samples == NULL || buf_size == 0) {
-        return; // Prevent null pointer issues
+        return -1; // Error: Invalid input
     }
 
-    // Write CSV header
-    size_t offset = snprintf(buffer, buf_size, 
-        "Timestamp,B1,B2,B3,B4,B5,B6,B7,B8,B9,B10,B11,B12,B13,B14,B15,B16,B17,B18,B19,B20\n");
+    size_t offset = 0;
 
-    // Check if header was truncated
+    // Write CSV header dynamically
+    offset += snprintf(buffer + offset, buf_size - offset, "Timestamp");
+    for (uint8_t i = 1; i <= NUMBER_OF_BATTERIES_IN_SERIES; i++) {
+        offset += snprintf(buffer + offset, buf_size - offset, ",B%d", i);
+    }
+    offset += snprintf(buffer + offset, buf_size - offset, "\n");
+
     if (offset >= buf_size) {
-        buffer[buf_size - 1] = '\0';
         printf("Warning: Buffer too small, header truncated!\n");
-        return;
+        return -2; // Error: Buffer overflow
     }
 
     // Write each sample
@@ -149,11 +152,9 @@ void format_csv(char *buffer, size_t buf_size) {
         int written = snprintf(buffer + offset, buf_size - offset, "%lld", samples[j].timestamp);
 
         if (written < 0 || (size_t)written >= buf_size - offset) {
-            buffer[buf_size - 1] = '\0';
             printf("Warning: Buffer too small, data truncated!\n");
-            return;
+            return -2;
         }
-
         offset += written;
 
         // Add ADC values
@@ -161,9 +162,8 @@ void format_csv(char *buffer, size_t buf_size) {
             written = snprintf(buffer + offset, buf_size - offset, ",%d", samples[j].adc_values[i]);
 
             if (written < 0 || (size_t)written >= buf_size - offset) {
-                buffer[buf_size - 1] = '\0';
                 printf("Warning: Buffer too small, data truncated!\n");
-                return;
+                return -2;
             }
 
             offset += written;
@@ -173,11 +173,13 @@ void format_csv(char *buffer, size_t buf_size) {
         if (offset < buf_size - 1) {
             buffer[offset++] = '\n';
             buffer[offset] = '\0';
+        } else {
+            printf("Warning: Buffer too small, data truncated!\n");
+            return -2;
         }
     }
 
-    // Ensure null-termination
-    buffer[buf_size - 1] = '\0';
+    return 0; // Success
 }
 
 void store_sample(void) {
