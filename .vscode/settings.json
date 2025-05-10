@@ -5,6 +5,11 @@
         "nrfx_temp.h": "c",
         "lbs.h": "c",
         "stddef.h": "c",
-        "compare": "cpp"
+        "compare": "cpp",
+        "settings.h": "c",
+        "errno.h": "c",
+        "memory": "c",
+        "type_traits": "c",
+        "nvs.h": "c"
     }
 }

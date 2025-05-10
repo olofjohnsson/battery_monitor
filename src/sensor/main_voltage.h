@@ -19,6 +19,14 @@ void store_sample(void);
 
 void attempt_send(void);
 
+void load_samples_from_nvs(void);
+
+void store_sample_nvs(void);
+
+void nvs_debug(void);
+
+void flash_init(void);
+
 #ifdef __cplusplus
 }
 #endif

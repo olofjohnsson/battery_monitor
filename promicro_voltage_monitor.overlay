@@ -35,59 +35,58 @@
         status = "disabled";
     };
 
-	leds {
-		compatible = "gpio-leds";
-		red: led_0 {
-			gpios = <&gpio0 15 (GPIO_ACTIVE_LOW)>;
-			label = "Red LED";
-		};
+    led_red: led_red {
+		compatible = "nordic,gpio-pins";
+		gpios = <&gpio0 15 (GPIO_ACTIVE_LOW)>;
+        status = "okay";
 	};
 
-    mux_a_0: mux-a-0 {
+
+    mux_a_0: mux_a_0 {
         compatible = "nordic,gpio-pins";
-        gpios = <&gpio0 10 GPIO_ACTIVE_HIGH>;
+        gpios = <&gpio0 10 (GPIO_ACTIVE_HIGH)>;
         status = "okay";
     };
 
-    mux_a_1: mux-a-1 {
+    mux_a_1: mux_a_1 {
         compatible = "nordic,gpio-pins";
-        gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>;
+        gpios = <&gpio0 11 (GPIO_ACTIVE_HIGH)>;
         status = "okay";
     };
 
-    mux_a_2: mux-a-2 {
+    mux_a_2: mux_a_2 {
         compatible = "nordic,gpio-pins";
-        gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
+        gpios = <&gpio0 12 (GPIO_ACTIVE_HIGH)>;
         status = "okay";
     };
 
-    mux_a_3: mux-a-3 {
+    mux_a_3: mux_a_3 {
         compatible = "nordic,gpio-pins";
-        gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
+        gpios = <&gpio0 13 (GPIO_ACTIVE_HIGH)>;
         status = "okay";
     };
     
-    mux_b_0: mux-b-0 {
+    mux_b_0: mux_b_0 {
         compatible = "nordic,gpio-pins";
-        gpios = <&gpio0 14 GPIO_ACTIVE_HIGH>;
+        gpios = <&gpio0 14 (GPIO_ACTIVE_HIGH)>;
         status = "okay";
     };
 
-    mux_b_1: mux-b-1 {
+    mux_b_1: mux_b_1 {
         compatible = "nordic,gpio-pins";
-        gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+        gpios = <&gpio0 16 (GPIO_ACTIVE_HIGH)>;
         status = "okay";
     };
 
-    mux_b_2: mux-b-2 {
+    mux_b_2: mux_b_2 {
         compatible = "nordic,gpio-pins";
-        gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>;
+        gpios = <&gpio0 17 (GPIO_ACTIVE_HIGH)>;
         status = "okay";
     };
 
-    mux_b_3: mux-b-3 {
+    mux_b_3: mux_b_3 {
         compatible = "nordic,gpio-pins";
-        gpios = <&gpio0 18 GPIO_ACTIVE_HIGH>;
+        gpios = <&gpio0 18 (GPIO_ACTIVE_HIGH)>;
         status = "okay";
     };
 };
@@ -105,5 +104,17 @@
         zephyr,input-positive = <NRF_SAADC_AIN0>;
         zephyr,resolution = <10>;
     };
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&gpiote {
+	status = "okay";
 };
 

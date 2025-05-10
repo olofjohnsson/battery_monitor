@@ -1,0 +1,3 @@
+nvs_storage:
+  address: 0x000f0000  # adjust to a safe offset inside flash
+  size: 0x10000        # 64 KB

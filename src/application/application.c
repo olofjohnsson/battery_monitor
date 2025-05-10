@@ -34,12 +34,17 @@ void run_application()
     // Initialize internal temperature sensor
     init_temp();
 
+    flash_init();
+
     // Main loop: Read and send temperature data over Bluetooth
     for (;;) 
     {
         //int32_t temp = read_temperature_int();  // Read the temperature in integer format
         //bt_send_temp(temp);                    // Send temperature data over Bluetooth
-        store_sample();
+        //load_samples_from_nvs();
+        //flash_init();
+        //nvs_debug();
+        store_sample_nvs();
         attempt_send();
         k_sleep(K_MSEC(1000));                 // Wait for 1 second
     }

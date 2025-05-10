@@ -1,9 +1,13 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/kernel.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/device.h>
+#include "led.h"
 
 // Static GPIO descriptor for the LED, defined using a device tree alias (redled).
-static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(redled), gpios);
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_NODELABEL(led_red), gpios);
+
 
 /**
  * @brief Initialize GPIO pins and set the LED to an inactive state.
